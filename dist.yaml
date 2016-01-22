@@ -1,0 +1,34 @@
+# This file contains values that are likely to change per distribution.
+# The aim is to make it easier to update / extend the charms with
+# minimal changes to the shared code in charmhelpers.
+vendor: apache
+packages:
+    - 'unzip'
+dirs:
+    zeppelin:
+        path: '/usr/lib/zeppelin'
+        owner: 'ubuntu'
+        group: 'hadoop'
+    zeppelin_conf:
+        path: '/etc/zeppelin/conf'
+        owner: 'ubuntu'
+        group: 'hadoop'
+    zeppelin_logs:
+        path: '/var/log/zeppelin'
+        owner: 'ubuntu'
+        group: 'hadoop'
+    zeppelin_notebooks:
+        path: '/var/lib/zeppelin/notebook'
+        owner: 'ubuntu'
+        group: 'hadoop'
+ports:
+    # Ports that need to be exposed, overridden, or manually specified.
+    # Only expose ports serving a UI or external API (i.e., namenode and
+    # resourcemanager).  Communication among units within the cluster does
+    # not need ports to be explicitly opened.
+    # If adding a new port here, you will need to update
+    # charmhelpers.contrib.bigdata.handlers.apache or hooks/callbacks.py
+    # to ensure that it is supported.
+    zeppelin:
+        port: 9090
+        exposed_on: 'zeppelin'

@@ -1,0 +1,2 @@
+jujubigdata>=6.0.0,<7.0.0
+jujuresources>=0.3.3,<1.0.0

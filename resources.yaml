@@ -1,0 +1,11 @@
+options:
+  output_dir: /home/ubuntu/resources
+optional_resources:
+  zeppelin-ppc64le:
+    url: https://s3.amazonaws.com/jujubigdata/apache/noarch/zeppelin-0.5.5-incubating-bin-c35ec193-all.tgz
+    hash: c35ec193ad2b0532594e5dc42e76c1da45f67f608c1e65a278684cdfa39cb4f4b6ff31d80daf43398da27d304c2f03ac6d148c59556dff28f2616266b6a7bc9d
+    hash_type: sha512
+  zeppelin-x86_64:
+    url: https://s3.amazonaws.com/jujubigdata/apache/noarch/zeppelin-0.5.5-incubating-bin-c35ec193-all.tgz
+    hash: c35ec193ad2b0532594e5dc42e76c1da45f67f608c1e65a278684cdfa39cb4f4b6ff31d80daf43398da27d304c2f03ac6d148c59556dff28f2616266b6a7bc9d
+    hash_type: sha512

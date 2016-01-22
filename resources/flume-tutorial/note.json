@@ -1,0 +1,367 @@
+{
+  "paragraphs": [
+    {
+      "text": "%md\n## Welcome to the Realtime Syslog Analytics tutorial, powered by Juju.\n### In this live tutorial we will demonstrate three phases of a big data solution:\n#### 1. Data Ingestion: Flume-Syslog -\u003e Flume-HDFS\n#### 2. Data Processing: Spark+YARN\n#### 3. Data Visualization: SparkSQL+Zeppelin",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 12.0,
+        "tableHide": false,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1440101679810_1108841391",
+      "id": "20150820-151439_133078543",
+      "result": {
+        "code": "SUCCESS",
+        "type": "HTML",
+        "msg": "\u003ch2\u003eWelcome to the Realtime Syslog Analytics tutorial, powered by Juju.\u003c/h2\u003e\n\u003ch3\u003eIn this live tutorial we will demonstrate three phases of a big data solution:\u003c/h3\u003e\n\u003ch4\u003e1. Data Ingestion: Flume-Syslog -\u003e Flume-HDFS\u003c/h4\u003e\n\u003ch4\u003e2. Data Processing: Spark+YARN\u003c/h4\u003e\n\u003ch4\u003e3. Data Visualization: SparkSQL+Zeppelin\u003c/h4\u003e\n"
+      },
+      "dateCreated": "Aug 20, 2015 3:14:39 PM",
+      "dateStarted": "Dec 14, 2015 10:45:26 PM",
+      "dateFinished": "Dec 14, 2015 10:45:26 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Generate Data and Verify Ingestion",
+      "text": "%sh\n# Generate syslog messages by trying to ssh to the hdfs-master unit.\n# This will likely result in a \u0027publickey denied\u0027 error, but it will\n# be enough to trigger a syslog event on the hdfs-master.\nMASTER\u003d`grep hdfs-master /etc/hosts | awk \u0027{print $1}\u0027`\nfor i in `seq 1 10`;\ndo\n  ssh -oStrictHostKeyChecking\u003dno $MASTER uptime \u003e/dev/null 2\u003e\u00261\n  sleep 1\ndone\n\n# Check if Flume has collected and sent the syslog messages to HDFS.\n# If no output is seen from this command, wait a few minutes and try\n# again. The amount of time between Flume ingesting the event and it\n# being available in HDFS is controlled by the \u0027roll_interval\u0027\n# configuration option in the flume-hdfs charm.\nhadoop fs -ls -R /user/flume/flume-syslog | tail",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "tableHide": false,
+        "colWidth": 12.0,
+        "editorMode": "ace/mode/sh",
+        "editorHide": false,
+        "title": true,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1440112183363_1890510694",
+      "id": "20150820-180943_1527660289",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "-rw-r--r--   3 flume supergroup       2895 2015-12-14 20:05 /user/flume/flume-syslog/2015-12-14/FlumeData.1450123107639\n-rw-r--r--   3 flume supergroup        318 2015-12-14 20:22 /user/flume/flume-syslog/2015-12-14/FlumeData.1450124229842\n-rw-r--r--   3 flume supergroup        299 2015-12-14 20:31 /user/flume/flume-syslog/2015-12-14/FlumeData.1450124775232\n-rw-r--r--   3 flume supergroup        900 2015-12-14 20:51 /user/flume/flume-syslog/2015-12-14/FlumeData.1450125984544\n-rw-r--r--   3 flume supergroup        299 2015-12-14 20:59 /user/flume/flume-syslog/2015-12-14/FlumeData.1450126481770\n-rw-r--r--   3 flume supergroup        617 2015-12-14 21:22 /user/flume/flume-syslog/2015-12-14/FlumeData.1450127827086\n-rw-r--r--   3 flume supergroup        299 2015-12-14 21:50 /user/flume/flume-syslog/2015-12-14/FlumeData.1450129557429\n-rw-r--r--   3 flume supergroup       2417 2015-12-14 22:20 /user/flume/flume-syslog/2015-12-14/FlumeData.1450131310866\n-rw-r--r--   3 flume supergroup       1800 2015-12-14 22:35 /user/flume/flume-syslog/2015-12-14/FlumeData.1450132244785\n-rw-r--r--   3 flume supergroup        900 2015-12-14 22:40 /user/flume/flume-syslog/2015-12-14/FlumeData.1450132847875.tmp\n"
+      },
+      "dateCreated": "Aug 20, 2015 6:09:43 PM",
+      "dateStarted": "Dec 14, 2015 10:45:26 PM",
+      "dateFinished": "Dec 14, 2015 10:45:40 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Simple Data Processing with Scala",
+      "text": "// Output the number of sshd syslog events\nsc.textFile(\"/user/flume/flume-syslog/*/*\").filter(line \u003d\u003e line.contains(\"sshd\")).count()",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 12.0,
+        "editorHide": false,
+        "tableHide": false,
+        "title": true,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1440112260119_-1393028364",
+      "id": "20150820-181100_389628381",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "res76: Long \u003d 61\n"
+      },
+      "dateCreated": "Aug 20, 2015 6:11:00 PM",
+      "dateStarted": "Dec 14, 2015 10:45:26 PM",
+      "dateFinished": "Dec 14, 2015 10:45:27 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Data processing to enable future queries",
+      "text": "import scala.util.Try\nval reSystemLog \u003d \"\"\"^\\\u003c\\d+\\\u003e([A-Za-z0-9, ]+\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?)\\s+(\\S+)\\s+([^\\[]+)\\[(\\d+)\\]\\s*:?\\s*(.*)\"\"\".r\ncase class SyslogMessage(timestamp: String, host: Option[String], process: String, pid: Int, message: String)\n\nval lines \u003d sc.textFile(\"/user/flume/flume-syslog/*/*\")\nval events \u003d lines.flatMap {\n      case reSystemLog(timestamp,hostname, proc, pidS, msg) \u003d\u003e\n        for {pid \u003c- Try(pidS.toInt).toOption} yield SyslogMessage(timestamp,Some(hostname), proc, pid, msg)\n      case _ \u003d\u003e None\n    }.toDF()\n\nevents.registerTempTable(\"syslog\")\n",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "tableHide": false,
+        "colWidth": 12.0,
+        "editorMode": "ace/mode/scala",
+        "editorHide": false,
+        "title": true,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1440133397982_798196016",
+      "id": "20150821-000317_766530322",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT",
+        "msg": "import scala.util.Try\nreSystemLog: scala.util.matching.Regex \u003d ^\\\u003c\\d+\\\u003e([A-Za-z0-9, ]+\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?)\\s+(\\S+)\\s+([^\\[]+)\\[(\\d+)\\]\\s*:?\\s*(.*)\ndefined class SyslogMessage\nlines: org.apache.spark.rdd.RDD[String] \u003d MapPartitionsRDD[278] at textFile at \u003cconsole\u003e:45\nevents: org.apache.spark.sql.DataFrame \u003d [timestamp: string, host: string, process: string, pid: int, message: string]\n"
+      },
+      "dateCreated": "Aug 21, 2015 12:03:17 AM",
+      "dateStarted": "Dec 14, 2015 10:45:27 PM",
+      "dateFinished": "Dec 14, 2015 10:45:29 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Data Visualization",
+      "text": "%sql \nselect process, count(1) value\nfrom syslog\ngroup by process \norder by process",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 4.0,
+        "editorHide": false,
+        "tableHide": false,
+        "title": true,
+        "graph": {
+          "mode": "pieChart",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [
+            {
+              "name": "process",
+              "index": 0.0,
+              "aggr": "sum"
+            }
+          ],
+          "values": [
+            {
+              "name": "value",
+              "index": 1.0,
+              "aggr": "sum"
+            }
+          ],
+          "groups": [],
+          "scatter": {
+            "xAxis": {
+              "name": "process",
+              "index": 0.0,
+              "aggr": "sum"
+            },
+            "yAxis": {
+              "name": "value",
+              "index": 1.0,
+              "aggr": "sum"
+            }
+          }
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1440473498968_444762596",
+      "id": "20150824-223138_1548703563",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TABLE",
+        "msg": "process\tvalue\nCRON\t9\nsshd\t61\nsu\t8\n"
+      },
+      "dateCreated": "Aug 24, 2015 10:31:38 PM",
+      "dateStarted": "Dec 14, 2015 10:45:28 PM",
+      "dateFinished": "Dec 14, 2015 10:45:31 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Data Visualization",
+      "text": "%sql \nselect host, count(1) value\nfrom syslog\ngroup by host\n",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 4.0,
+        "tableHide": false,
+        "title": true,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [
+            {
+              "name": "host",
+              "index": 0.0,
+              "aggr": "sum"
+            }
+          ],
+          "values": [
+            {
+              "name": "value",
+              "index": 1.0,
+              "aggr": "sum"
+            }
+          ],
+          "groups": [],
+          "scatter": {
+            "yAxis": {
+              "name": "value",
+              "index": 1.0,
+              "aggr": "sum"
+            }
+          }
+        }
+      },
+      "settings": {
+        "params": {
+          "maxDate": "\"Dec 15\""
+        },
+        "forms": {}
+      },
+      "jobName": "paragraph_1440137477230_886878134",
+      "id": "20150821-011117_310225391",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TABLE",
+        "msg": "host\tvalue\nhdfs-master-3\t78\n"
+      },
+      "dateCreated": "Aug 21, 2015 1:11:17 AM",
+      "dateStarted": "Dec 14, 2015 10:45:29 PM",
+      "dateFinished": "Dec 14, 2015 10:45:33 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "title": "Data Visualization",
+      "text": "%sql \nselect process, timestamp, message\nfrom syslog\norder by timestamp desc\n",
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 4.0,
+        "tableHide": false,
+        "title": true,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [
+            {
+              "name": "process",
+              "index": 0.0,
+              "aggr": "sum"
+            }
+          ],
+          "values": [
+            {
+              "name": "timestamp",
+              "index": 1.0,
+              "aggr": "sum"
+            }
+          ],
+          "groups": [],
+          "scatter": {
+            "xAxis": {
+              "name": "process",
+              "index": 0.0,
+              "aggr": "sum"
+            }
+          }
+        }
+      },
+      "settings": {
+        "params": {
+          "maxDate": "\"Dec 15\""
+        },
+        "forms": {}
+      },
+      "jobName": "paragraph_1440163786226_421898739",
+      "id": "20150821-082946_601268612",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TABLE",
+        "msg": "process\ttimestamp\tmessage\nsshd\tDec 14 22:41:25\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:44\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:43\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:42\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:41\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:40\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:39\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:38\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:37\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:35\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:40:34\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:30\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:29\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:28\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:27\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:25\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:24\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:23\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:22\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:21\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:32:20\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:36\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:35\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:34\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:33\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:32\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:31\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:30\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:29\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:28\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:30:26\tConnection closed by 172.31.6.27 [preauth]\nCRON\tDec 14 22:17:01\tpam_unix(cron:session): session closed for user root\nCRON\tDec 14 22:17:01\t(root) CMD (   cd / \u0026\u0026 run-parts --report /etc/cron.hourly)\nCRON\tDec 14 22:17:01\tpam_unix(cron:session): session opened for user root by (uid\u003d0)\nsshd\tDec 14 22:16:36\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:35\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:34\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:33\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:32\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:30\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:29\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:28\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:27\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:26\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:06\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:05\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:04\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:03\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:02\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:01\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:16:00\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:15:58\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:15:57\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 22:15:56\tConnection closed by 172.31.6.27 [preauth]\nCRON\tDec 14 21:17:01\tpam_unix(cron:session): session opened for user root by (uid\u003d0)\nCRON\tDec 14 21:17:01\t(root) CMD (   cd / \u0026\u0026 run-parts --report /etc/cron.hourly)\nCRON\tDec 14 21:17:01\tpam_unix(cron:session): session closed for user root\nsshd\tDec 14 20:46:19\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:18\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:17\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:15\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:14\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:13\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:12\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:11\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:10\tConnection closed by 172.31.6.27 [preauth]\nsshd\tDec 14 20:46:09\tConnection closed by 172.31.6.27 [preauth]\nCRON\tDec 14 20:17:01\tpam_unix(cron:session): session opened for user root by (uid\u003d0)\nCRON\tDec 14 20:17:01\t(root) CMD (   cd / \u0026\u0026 run-parts --report /etc/cron.hourly)\nCRON\tDec 14 20:17:01\tpam_unix(cron:session): session closed for user root\nsu\tDec 14 20:00:04\tpam_unix(su:session): session closed for user hdfs\nsu\tDec 14 20:00:02\tSuccessful su for hdfs by root\nsu\tDec 14 20:00:02\tpam_unix(su:session): session opened for user hdfs by (uid\u003d0)\nsu\tDec 14 20:00:02\t+ ??? root:hdfs\nsu\tDec 14 19:58:19\tpam_unix(su:session): session closed for user hdfs\nsu\tDec 14 19:58:16\tSuccessful su for hdfs by root\nsu\tDec 14 19:58:16\tpam_unix(su:session): session opened for user hdfs by (uid\u003d0)\nsu\tDec 14 19:58:16\t+ ??? root:hdfs\n"
+      },
+      "dateCreated": "Aug 21, 2015 8:29:46 AM",
+      "dateStarted": "Dec 14, 2015 10:45:32 PM",
+      "dateFinished": "Dec 14, 2015 10:45:33 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    },
+    {
+      "dateUpdated": "Dec 14, 2015 10:45:26 PM",
+      "config": {
+        "colWidth": 12.0,
+        "graph": {
+          "mode": "table",
+          "height": 300.0,
+          "optionOpen": false,
+          "keys": [],
+          "values": [],
+          "groups": [],
+          "scatter": {}
+        }
+      },
+      "settings": {
+        "params": {},
+        "forms": {}
+      },
+      "jobName": "paragraph_1450133009431_-1034835083",
+      "id": "20151214-224329_23662424",
+      "result": {
+        "code": "SUCCESS",
+        "type": "TEXT"
+      },
+      "dateCreated": "Dec 14, 2015 10:43:29 PM",
+      "dateStarted": "Dec 14, 2015 10:45:33 PM",
+      "dateFinished": "Dec 14, 2015 10:45:33 PM",
+      "status": "FINISHED",
+      "progressUpdateIntervalMs": 500
+    }
+  ],
+  "name": "Zeppelin Flume/HDFS Tutorial",
+  "id": "flume-tutorial",
+  "angularObjects": {
+    "2B63VYH1C": [],
+    "2B7ZRMQC5": [],
+    "2B9BADXET": [],
+    "2B97PQGUW": [],
+    "2B6QP4RA6": [],
+    "2B6CX69YK": [],
+    "2B5WPBWAQ": [],
+    "2B7USGHF3": [],
+    "2B5TERH1N": [],
+    "2B5ZKZ9SA": [],
+    "2B7YSW7UV": [],
+    "2B6KFNTNS": [],
+    "2B5SX2N1E": []
+  },
+  "config": {
+    "looknfeel": "default"
+  },
+  "info": {}
+}
