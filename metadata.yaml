@@ -11,3 +11,6 @@ requires:
   spark:
     interface: spark
     scope: container
+  flink:
+    interface: flink
+    scope: container

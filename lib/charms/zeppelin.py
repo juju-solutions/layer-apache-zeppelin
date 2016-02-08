@@ -4,7 +4,7 @@ import jujuresources
 from path import Path
 from jujubigdata import utils
 from subprocess import call
-from charmhelpers.core import unitdata
+from charmhelpers.core import unitdata, hookenv
 
 
 class Zeppelin(object):
@@ -155,6 +155,14 @@ class Zeppelin(object):
         # if we try to destroy a deployment that didn't finish installing.
         utils.run_as('ubuntu', '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home), '--config', zeppelin_conf, 'stop')
 
+    def open_ports(self):
+        for port in self.dist_config.exposed_ports('zeppelin'):
+            hookenv.open_port(port)
+  
+    def close_ports(self):
+        for port in self.dist_config.exposed_ports('zeppelin'):
+            hookenv.close_port(port)
+  
     def cleanup(self):
         self.dist_config.remove_dirs()
         unitdata.kv().set('zeppelin.installed', False)
