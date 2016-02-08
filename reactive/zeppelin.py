@@ -75,6 +75,7 @@ def configure_zeppelin(flink):
     zepp.setup_zeppelin()
     zepp.configure_zeppelin()
     zepp.start()
+    zepp.open_ports()
     set_state('zeppelin.started')
     hookenv.status_set('active', 'Ready')
 
@@ -84,6 +85,7 @@ def configure_zeppelin(flink):
 def stop_zeppelin():
     zepp = Zeppelin(get_dist_config())
     zepp.stop()
+    zepp.close_ports()
     remove_state('zepplin.started')
 
 

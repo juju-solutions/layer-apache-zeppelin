@@ -6,6 +6,6 @@ optional_resources:
     hash: c35ec193ad2b0532594e5dc42e76c1da45f67f608c1e65a278684cdfa39cb4f4b6ff31d80daf43398da27d304c2f03ac6d148c59556dff28f2616266b6a7bc9d
     hash_type: sha512
   zeppelin-x86_64:
-    url: https://s3.amazonaws.com/jujubigdata/apache/noarch/zeppelin-0.5.5-incubating-bin-c35ec193-all.tgz
-    hash: c35ec193ad2b0532594e5dc42e76c1da45f67f608c1e65a278684cdfa39cb4f4b6ff31d80daf43398da27d304c2f03ac6d148c59556dff28f2616266b6a7bc9d
+    url: http://apache.rediris.es/incubator/zeppelin/0.5.6-incubating/zeppelin-0.5.6-incubating-bin-all.tgz
+    hash: 2b372cd274e5f3e82b7f602d84a6dd91eb6611168370415f59dc7baa20145e0af8eaa93270618b003253a8b5b54ed57f62795a0eaa93d0ebe8c8489095c92e91
     hash_type: sha512

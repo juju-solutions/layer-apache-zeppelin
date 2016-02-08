@@ -32,3 +32,6 @@ ports:
     zeppelin:
         port: 9090
         exposed_on: 'zeppelin'
+    zeppelin_web:
+        port: 9091
+        exposed_on: 'zeppelin'

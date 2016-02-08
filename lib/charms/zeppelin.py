@@ -116,6 +116,7 @@ class Zeppelin(object):
         hadoop_conf_dir = etc_env.get('HADOOP_CONF_DIR', '/etc/hadoop/conf')
         spark_home = etc_env.get('SPARK_HOME', '/usr/lib/spark')
         spark_driver_mem = etc_env.get('SPARK_DRIVER_MEMORY', '1g')
+        spark_exe_mode = os.environ.get('MASTER', 'yarn-client')
         spark_executor_mem = etc_env.get('SPARK_EXECUTOR_MEMORY', '1g')
         zeppelin_env = self.dist_config.path('zeppelin_conf') / 'zeppelin-env.sh'
         with open(zeppelin_env, "a") as f:
@@ -129,6 +130,7 @@ class Zeppelin(object):
             f.write('export SPARK_SUBMIT_OPTIONS="--driver-memory {} --executor-memory {}"\n'.format(spark_driver_mem, spark_executor_mem))
             f.write('export HADOOP_CONF_DIR={}\n'.format(hadoop_conf_dir))
             f.write('export PYTHONPATH={s}/python:{s}/python/lib/py4j-0.8.2.1-src.zip\n'.format(s=spark_home))
+            f.write('export MASTER={}\n'.format(spark_exe_mode))
 
         # User needs write access to zepp's conf to write interpreter.json
         # on server start. chown the whole conf dir, though we could probably
