@@ -35,3 +35,22 @@ def configure_zeppelin(spark):
     zepp.open_ports()
     set_state('zeppelin.started')
     hookenv.status_set('active', 'Ready')
+
+
+@when('zeppelin.started')
+@when_not('spark.available')
+def stop_zeppelin():
+    zepp = Zeppelin(get_dist_config())
+    zepp.stop()
+    remove_state('zepplin.started')
+
+
+@when_not('spark.related')
+def report_blocked():
+    hookenv.status_set('blocked', 'Waiting for relation to Apache Spark')
+
+
+@when('spark.related')
+@when_not('spark.available')
+def report_waiting(spark):
+    hookenv.status_set('waiting', 'Waiting for Apache Spark to become ready')
