@@ -80,9 +80,6 @@ class Zeppelin(object):
         dist_tutorial_dir.move(notebook_dir)
         self.copy_tutorial("hdfs-tutorial")
         self.copy_tutorial("flume-tutorial")
-        self.copy_tutorial("flink-tutorial-1")
-        self.copy_tutorial("flink-tutorial-2")
-        self.copy_tutorial("flink-tutorial-3")
         dist_notebook_dir.rmtree_p()
         # move the tutorial dir included in the tarball to our notebook dir and
         # symlink that dir under our zeppelin home. we've seen issues where

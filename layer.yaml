@@ -1,1 +1,1 @@
-includes: ['layer:basic', 'interface:spark', 'interface:flink']
+includes: ['layer:basic', 'interface:spark']

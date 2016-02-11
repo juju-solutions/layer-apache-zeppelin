@@ -14,8 +14,8 @@ As a Multi-purpose Notebook, Apache Zeppelin is the place for interactive:
 
 ## Usage
 
-This is a subordinate charm that requires the `apache-spark` or `apache-flink` interface. 
-Thisi means that you will need to deploy a base Apache Spark or Apache Flink  cluster to use 
+This is a subordinate charm that requires the `apache-spark` interface. 
+Thisi means that you will need to deploy a base Apache Spark cluster to use 
 Zeppelin. An easy way to deploy the recommended environment is to use the
 [apache-hadoop-spark-zeppelin](https://jujucharms.com/apache-hadoop-spark-zeppelin)
 bundle. This will deploy the Apache Hadoop platform with an Apache Spark +
