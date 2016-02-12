@@ -4,7 +4,7 @@ import jujuresources
 from path import Path
 from jujubigdata import utils
 from subprocess import call
-from charmhelpers.core import unitdata
+from charmhelpers.core import unitdata, hookenv
 
 
 class Zeppelin(object):
@@ -116,6 +116,7 @@ class Zeppelin(object):
         hadoop_conf_dir = etc_env.get('HADOOP_CONF_DIR', '/etc/hadoop/conf')
         spark_home = etc_env.get('SPARK_HOME', '/usr/lib/spark')
         spark_driver_mem = etc_env.get('SPARK_DRIVER_MEMORY', '1g')
+        spark_exe_mode = os.environ.get('MASTER', 'yarn-client')
         spark_executor_mem = etc_env.get('SPARK_EXECUTOR_MEMORY', '1g')
         zeppelin_env = self.dist_config.path('zeppelin_conf') / 'zeppelin-env.sh'
         with open(zeppelin_env, "a") as f:
@@ -129,6 +130,7 @@ class Zeppelin(object):
             f.write('export SPARK_SUBMIT_OPTIONS="--driver-memory {} --executor-memory {}"\n'.format(spark_driver_mem, spark_executor_mem))
             f.write('export HADOOP_CONF_DIR={}\n'.format(hadoop_conf_dir))
             f.write('export PYTHONPATH={s}/python:{s}/python/lib/py4j-0.8.2.1-src.zip\n'.format(s=spark_home))
+            f.write('export MASTER={}\n'.format(spark_exe_mode))
 
         # User needs write access to zepp's conf to write interpreter.json
         # on server start. chown the whole conf dir, though we could probably
@@ -155,6 +157,14 @@ class Zeppelin(object):
         # if we try to destroy a deployment that didn't finish installing.
         utils.run_as('ubuntu', '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home), '--config', zeppelin_conf, 'stop')
 
+    def open_ports(self):
+        for port in self.dist_config.exposed_ports('zeppelin'):
+            hookenv.open_port(port)
+  
+    def close_ports(self):
+        for port in self.dist_config.exposed_ports('zeppelin'):
+            hookenv.close_port(port)
+  
     def cleanup(self):
         self.dist_config.remove_dirs()
         unitdata.kv().set('zeppelin.installed', False)

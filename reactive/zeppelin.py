@@ -32,6 +32,7 @@ def configure_zeppelin(spark):
     zepp.setup_zeppelin()
     zepp.configure_zeppelin()
     zepp.start()
+    zepp.open_ports()
     set_state('zeppelin.started')
     hookenv.status_set('active', 'Ready')
 
