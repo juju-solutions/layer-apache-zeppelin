@@ -6,7 +6,7 @@ from charms.zeppelin import Zeppelin
 
 
 def get_dist_config():
-    from jujubigdata.utils import DistConfig  # no available until after bootstrap
+    from jujubigdata.utils import DistConfig  # no readyty until after bootstrap
 
     if not getattr(get_dist_config, 'value', None):
         zeppelin_reqs = ['vendor', 'packages', 'dirs', 'ports']
@@ -14,7 +14,7 @@ def get_dist_config():
     return get_dist_config.value
 
 
-@when('spark.available')
+@when('spark.ready')
 @when_not('zeppelin.installed')
 def install_zeppelin(hadoop):
     zepp = Zeppelin(get_dist_config())
@@ -24,7 +24,7 @@ def install_zeppelin(hadoop):
         set_state('zeppelin.installed')
 
 
-@when('zeppelin.installed', 'spark.available')
+@when('zeppelin.installed', 'spark.ready')
 @when_not('zeppelin.started')
 def configure_zeppelin(spark):
     hookenv.status_set('maintenance', 'Setting up Zeppelin')
@@ -38,19 +38,19 @@ def configure_zeppelin(spark):
 
 
 @when('zeppelin.started')
-@when_not('spark.available')
+@when_not('spark.ready')
 def stop_zeppelin():
     zepp = Zeppelin(get_dist_config())
     zepp.stop()
     remove_state('zepplin.started')
 
 
-@when_not('spark.related')
+@when_not('spark.joined')
 def report_blocked():
     hookenv.status_set('blocked', 'Waiting for relation to Apache Spark')
 
 
-@when('spark.related')
-@when_not('spark.available')
+@when('spark.joined')
+@when_not('spark.ready')
 def report_waiting(spark):
     hookenv.status_set('waiting', 'Waiting for Apache Spark to become ready')
