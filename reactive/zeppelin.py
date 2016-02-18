@@ -6,7 +6,7 @@ from charms.zeppelin import Zeppelin
 
 
 def get_dist_config():
-    from jujubigdata.utils import DistConfig  # no readyty until after bootstrap
+    from jujubigdata.utils import DistConfig  # no available until after bootstrap
 
     if not getattr(get_dist_config, 'value', None):
         zeppelin_reqs = ['vendor', 'packages', 'dirs', 'ports']
