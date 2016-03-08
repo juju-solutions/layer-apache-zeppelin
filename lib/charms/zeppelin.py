@@ -22,10 +22,8 @@ class Zeppelin(object):
         }
         self.verify_resources = utils.verify_resources(*self.resources.values())
 
-
     def is_installed(self):
         return unitdata.kv().get('zeppelin.prepared')
-
 
     def install(self, force=False):
         '''
@@ -45,11 +43,9 @@ class Zeppelin(object):
         unitdata.kv().set('zeppelin.prepared', True)
         unitdata.kv().flush(True)
 
-
     def setup_zeppelin(self):
         self.setup_zeppelin_config()
         self.setup_zeppelin_tutorial()
-
 
     def setup_zeppelin_config(self):
         '''
@@ -66,7 +62,6 @@ class Zeppelin(object):
         zeppelin_site = self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml'
         if not zeppelin_site.exists():
             (self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml.template').copy(zeppelin_site)
-
 
     def setup_zeppelin_tutorial(self):
         # The default zepp tutorial doesn't work with spark+hdfs (which is our
@@ -91,11 +86,9 @@ class Zeppelin(object):
         cmd = "chown -R ubuntu:hadoop {}".format(notebook_dir)
         call(cmd.split())
 
-
     def copy_tutorial(self, tutorial_name):
         tutorial_source = Path('resources/{}'.format(tutorial_name))
         tutorial_source.copytree(self.dist_config.path('zeppelin_notebooks') / tutorial_name)
-
 
     def configure_zeppelin(self):
         '''
@@ -121,13 +114,16 @@ class Zeppelin(object):
         zeppelin_env = self.dist_config.path('zeppelin_conf') / 'zeppelin-env.sh'
         with open(zeppelin_env, "a") as f:
             f.write('export ZEPPELIN_HOME={}\n'.format(self.dist_config.path('zeppelin')))
-            f.write('export ZEPPELIN_JAVA_OPTS="-Dspark.driver.memory={} -Dspark.executor.memory={}"\n'
-                                              .format(spark_driver_mem, spark_executor_mem))
+            f.write('export ZEPPELIN_JAVA_OPTS="-Dspark.driver.memory={} -Dspark.executor.memory={}"\n'.format(
+                spark_driver_mem,
+                spark_executor_mem))
             f.write('export ZEPPELIN_LOG_DIR={}\n'.format(self.dist_config.path('zeppelin_logs')))
             f.write('export ZEPPELIN_MEM="-Xms128m -Xmx1024m -XX:MaxPermSize=512m"\n')
             f.write('export ZEPPELIN_NOTEBOOK_DIR={}\n'.format(self.dist_config.path('zeppelin_notebooks')))
             f.write('export SPARK_HOME={}\n'.format(spark_home))
-            f.write('export SPARK_SUBMIT_OPTIONS="--driver-memory {} --executor-memory {}"\n'.format(spark_driver_mem, spark_executor_mem))
+            f.write('export SPARK_SUBMIT_OPTIONS="--driver-memory {} --executor-memory {}"\n'.format(
+                spark_driver_mem,
+                spark_executor_mem))
             f.write('export HADOOP_CONF_DIR={}\n'.format(hadoop_conf_dir))
             f.write('export PYTHONPATH={s}/python:{s}/python/lib/py4j-0.8.2.1-src.zip\n'.format(s=spark_home))
             f.write('export MASTER={}\n'.format(spark_exe_mode))
@@ -148,7 +144,10 @@ class Zeppelin(object):
             # chdir here because things like zepp tutorial think ZEPPELIN_HOME
             # is wherever the daemon was started from.
             os.chdir(zeppelin_home)
-            utils.run_as('ubuntu', '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home), '--config', zeppelin_conf, 'start')
+            utils.run_as('ubuntu',
+                         '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home),
+                         '--config', zeppelin_conf,
+                         'start')
 
     def stop(self):
         zeppelin_conf = self.dist_config.path('zeppelin_conf')
@@ -160,12 +159,11 @@ class Zeppelin(object):
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
             hookenv.open_port(port)
-  
+
     def close_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
             hookenv.close_port(port)
-  
+
     def cleanup(self):
         self.dist_config.remove_dirs()
         unitdata.kv().set('zeppelin.installed', False)
-
