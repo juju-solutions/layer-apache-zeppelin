@@ -14,9 +14,13 @@ class TestDeploy(unittest.TestCase):
 
     def test_deploy(self):
         self.d = amulet.Deployment(series='trusty')
-        self.d.add('spark', 'apache-spark')
-        self.d.add('zeppelin', 'apache-zeppelin')
-        self.d.relate('spark', 'zeppelin')
+        self.d.load({
+            'services': {
+                'spark': {'charm': 'apache-spark'},
+                'zeppelin': {'charm': 'apache-zeppelin'},
+            },
+            'relations': [('spark', 'zeppelin')],
+        })
         self.d.setup(timeout=900)
         self.d.sentry.wait(timeout=1800)
         self.unit = self.d.sentry['zeppelin'][0]
