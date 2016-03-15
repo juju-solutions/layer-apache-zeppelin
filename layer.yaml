@@ -1,1 +1,2 @@
+repo: git@github.com:juju-solutions/layer-apache-zeppelin.git
 includes: ['layer:basic', 'interface:spark']
