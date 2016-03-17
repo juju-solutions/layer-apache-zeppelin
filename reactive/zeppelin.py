@@ -31,7 +31,9 @@ def configure_zeppelin(spark):
 @when('zeppelin.started')
 @when_not('spark.ready')
 def stop_zeppelin():
+    hookenv.status_set('maintenance', 'Stopping Zeppelin')
     zepp = Zeppelin()
+    zepp.close_ports()
     zepp.stop()
     remove_state('zepplin.started')
 
