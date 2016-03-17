@@ -2,22 +2,13 @@
 from charms.reactive import when, when_not
 from charms.reactive import set_state, remove_state
 from charmhelpers.core import hookenv
-from charms.zeppelin import Zeppelin
-
-
-def get_dist_config():
-    from jujubigdata.utils import DistConfig  # no available until after bootstrap
-
-    if not getattr(get_dist_config, 'value', None):
-        zeppelin_reqs = ['vendor', 'packages', 'dirs', 'ports']
-        get_dist_config.value = DistConfig(filename='dist.yaml', required_keys=zeppelin_reqs)
-    return get_dist_config.value
+from charms.layer.apache_zeppelin import Zeppelin
 
 
 @when('spark.ready')
 @when_not('zeppelin.installed')
 def install_zeppelin(hadoop):
-    zepp = Zeppelin(get_dist_config())
+    zepp = Zeppelin()
     if zepp.verify_resources():
         hookenv.status_set('maintenance', 'Installing Zeppelin')
         zepp.install()
@@ -28,7 +19,7 @@ def install_zeppelin(hadoop):
 @when_not('zeppelin.started')
 def configure_zeppelin(spark):
     hookenv.status_set('maintenance', 'Setting up Zeppelin')
-    zepp = Zeppelin(get_dist_config())
+    zepp = Zeppelin()
     zepp.setup_zeppelin()
     zepp.configure_zeppelin()
     zepp.start()
@@ -40,7 +31,7 @@ def configure_zeppelin(spark):
 @when('zeppelin.started')
 @when_not('spark.ready')
 def stop_zeppelin():
-    zepp = Zeppelin(get_dist_config())
+    zepp = Zeppelin()
     zepp.stop()
     remove_state('zepplin.started')
 

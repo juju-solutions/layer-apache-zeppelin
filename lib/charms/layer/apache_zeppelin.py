@@ -13,12 +13,10 @@ class Zeppelin(object):
 
     :param DistConfig dist_config: The configuration container object needed.
     """
-    def __init__(self, dist_config):
-        self.dist_config = dist_config
-        self.cpu_arch = utils.cpu_arch()
-
+    def __init__(self, dist_config=None):
+        self.dist_config = dist_config or utils.DistConfig()
         self.resources = {
-            'zeppelin': 'zeppelin-%s' % self.cpu_arch,
+            'zeppelin': 'zeppelin-%s' % utils.cpu_arch(),
         }
         self.verify_resources = utils.verify_resources(*self.resources.values())
 
@@ -29,7 +27,8 @@ class Zeppelin(object):
         '''
         Create the directories. This method is to be called only once.
 
-        :param bool force: Force the execution of the installation even if this is not the first installation attempt.
+        :param bool force: Force the execution of the installation even if this
+        is not the first installation attempt.
         '''
         if not force and self.is_installed():
             return
