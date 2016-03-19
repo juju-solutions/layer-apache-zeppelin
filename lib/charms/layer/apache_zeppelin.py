@@ -106,15 +106,14 @@ class Zeppelin(object):
 
         etc_env = utils.read_etc_env()
         hadoop_conf_dir = etc_env.get('HADOOP_CONF_DIR', '/etc/hadoop/conf')
-        hadoop_home = etc_env.get('HADOOP_HOME', '/usr/lib/hadoop')
-        lzo_classpath = '{}/share/hadoop/common/lib/hadoop-lzo-0.4.20-SNAPSHOT.jar'.format(hadoop_home)
+        hadoop_extra_classpath = etc_env.get('HADOOP_EXTRA_CLASSPATH', '')
         spark_home = etc_env.get('SPARK_HOME', '/usr/lib/spark')
         spark_driver_mem = etc_env.get('SPARK_DRIVER_MEMORY', '1g')
         spark_exe_mode = os.environ.get('MASTER', 'yarn-client')
         spark_executor_mem = etc_env.get('SPARK_EXECUTOR_MEMORY', '1g')
         zeppelin_env = self.dist_config.path('zeppelin_conf') / 'zeppelin-env.sh'
         with open(zeppelin_env, "a") as f:
-            f.write('export ZEPPELIN_CLASSPATH_OVERRIDES={}\n'.format(lzo_classpath))
+            f.write('export ZEPPELIN_CLASSPATH_OVERRIDES={}\n'.format(hadoop_extra_classpath))
             f.write('export ZEPPELIN_HOME={}\n'.format(self.dist_config.path('zeppelin')))
             f.write('export ZEPPELIN_JAVA_OPTS="-Dspark.driver.memory={} -Dspark.executor.memory={}"\n'.format(
                 spark_driver_mem,
