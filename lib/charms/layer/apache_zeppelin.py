@@ -151,11 +151,11 @@ class Zeppelin(object):
                          'start')
 
     def stop(self):
-        zeppelin_conf = self.dist_config.path('zeppelin_conf')
-        zeppelin_home = self.dist_config.path('zeppelin')
-        # TODO: try/catch existence of zeppelin-daemon.sh. Stop hook will fail
-        # if we try to destroy a deployment that didn't finish installing.
-        utils.run_as('ubuntu', '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home), '--config', zeppelin_conf, 'stop')
+        if utils.jps("zeppelin"):
+            zeppelin_conf = self.dist_config.path('zeppelin_conf')
+            zeppelin_home = self.dist_config.path('zeppelin')
+            daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
+            utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
 
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):

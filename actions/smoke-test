@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+
+import sys
+import json
+from time import sleep
+from urllib.parse import urljoin
+from operator import itemgetter
+
+import requests
+
+from charmhelpers.core import hookenv
+from charms.reactive import is_state
+
+
+def fail(msg):
+    hookenv.action_fail(msg)
+    sys.exit()
+
+
+if not is_state('zeppelin.started'):
+    fail('Zeppelin not yet ready')
+
+
+notebook_id = 'hdfs-tutorial'
+zep_addr = 'localhost'
+base_url = 'http://{}:9090/api/notebook/'.format(zep_addr)
+interp_url = urljoin(base_url, 'interpreter/bind/%s' % notebook_id)
+job_url = urljoin(base_url, 'job/%s' % notebook_id)
+para_url = urljoin(base_url, '%s/paragraph/' % notebook_id)
+
+try:
+    # bind interpreters
+    resp = requests.get(interp_url, timeout=60)
+    resp.raise_for_status()
+    interpreters = resp.json()
+    interp_ids = list(map(itemgetter('id'), interpreters['body']))
+    resp = requests.put(interp_url, data=json.dumps(interp_ids), timeout=60)
+    resp.raise_for_status()
+
+    # run notebook
+    resp = requests.post(job_url, timeout=60)
+    resp.raise_for_status()
+    for i in range(5):
+        sleep(10)  # sleep first to give the job some time to run
+        try:
+            resp = requests.get(job_url, timeout=60)
+        except requests.exceptions.Timeout:
+            # sometimes a long-running paragraph will cause the notebook
+            # job endpoint to timeout, but it may eventually recover
+            continue
+        if resp.status_code == 500:
+            # sometimes a long-running paragraph will cause the notebook
+            # job endpoint to return 500, but it may eventually recover
+            continue
+        statuses = list(map(itemgetter('status'), resp.json()['body']))
+        in_progress = {'PENDING', 'RUNNING'} & set(statuses)
+        if not in_progress:
+            break
+
+    # check for errors
+    errors = []
+    body = resp.json()['body']
+    for result in body:
+        if result['status'] == 'ERROR':
+            para_id = result['id']
+            resp = requests.get(urljoin(para_url, para_id), timeout=60)
+            resp.raise_for_status()
+            para = resp.json()['body']
+            if 'errorMessage' in para:
+                errmsg = para['errorMessage'].splitlines()[0]
+            elif 'result' in para:
+                errmsg = para['result']['msg'].splitlines()[0]
+            else:
+                errmsg = 'Unable to find error message'
+                hookenv.action_set('paragraph', resp.text)
+            fail('Notebook failed: {}'.format(errmsg))
+except requests.exceptions.RequestException as e:
+    fail('Request failed: {}: {}'.format(e.request.url, e))
