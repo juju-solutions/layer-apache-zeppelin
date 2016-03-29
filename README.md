@@ -15,7 +15,7 @@ As a Multi-purpose Notebook, Apache Zeppelin is the place for interactive:
 ## Usage
 
 This is a subordinate charm that requires the `apache-spark` interface. This
-means that you will need to deploy a base Apache Spark cluster to use 
+means that you will need to deploy a base Apache Spark cluster to use
 Zeppelin. An easy way to deploy the recommended environment is to use the
 [apache-hadoop-spark-zeppelin](https://jujucharms.com/apache-hadoop-spark-zeppelin)
 bundle. This will deploy the Apache Hadoop platform with an Apache Spark +
@@ -24,27 +24,8 @@ Zeppelin unit that communicates with the cluster by relating to the
 
     juju-quickstart apache-hadoop-spark-zeppelin
 
-Alternatively, you may manually deploy the recommended environment as follows:
+Once deployment is complete, expose Zeppelin:
 
-    juju deploy apache-hadoop-hdfs-master hdfs-master
-    juju deploy apache-hadoop-yarn-master yarn-master
-    juju deploy apache-hadoop-compute-slave compute-slave
-    juju deploy apache-hadoop-plugin plugin
-    juju deploy apache-spark spark
-    juju deploy apache-zeppelin zeppelin
-
-    juju add-relation yarn-master hdfs-master
-    juju add-relation compute-slave yarn-master
-    juju add-relation compute-slave hdfs-master
-    juju add-relation plugin yarn-master
-    juju add-relation plugin hdfs-master
-    juju add-relation spark plugin
-    juju add-relation zeppelin spark
-
-Once deployment is complete, expose Zeppelin. Since this is subordinate to
-Spark, you will need to expose both services:
-
-    juju expose spark
     juju expose zeppelin
 
 You may now access the web interface at
@@ -52,27 +33,41 @@ http://{spark_unit_ip_address}:9090. The ip address can be found by running
 `juju status spark | grep public-address`.
 
 
-## Testing the deployment
+## Verify the deployment
 
-By default, this deployment uses Spark in YARN mode and supports storing
-job data in HDFS. To test this, access the Zeppelin web interface at
-http://{spark_unit_ip_address}:9090. The ip address can be found by running
-`juju status spark | grep public-address`.
+### Status and Smoke Test
 
-  - Verify there is a green icon in the upper-right corner that says "Connected"
-  - Click the `Zeppelin HDFS Tutorial` link
-  - Click the `Save` button to bind the tutorial to our supported interpreters
-  - Click the `Play` button (arrow at the top of the page)
-  - Click `OK` when prompted to run all paragraphs
+The services provide extended status reporting to indicate when they are ready:
 
-The tutorial may take 5-10 minutes to run as it retrieves sample data,
-processes jobs, and stores results in HDFS. When successful, each paragraph will
-report `FINISHED` in their respective upper-right corners
+    juju status --format=tabular
+
+This is particularly useful when combined with `watch` to track the on-going
+progress of the deployment:
+
+    watch -n 0.5 juju status --format=tabular
+
+The message for each unit will provide information about that unit's state.
+Once they all indicate that they are ready, you can perform a "smoke test"
+to verify that Zeppelin is working as expected using the built-in `smoke-test`
+action:
+
+    juju action do zeppelin/0 smoke-test
+
+After a few seconds or so, you can check the results of the smoke test:
+
+    juju action status
+
+You will see `status: completed` if the smoke test was successful, or
+`status: failed` if it was not.  You can get more information on why it failed
+via:
+
+    juju action fetch <action-id>
 
 
 ## Limitations
 
 ### Spark Interpreter Settings
+
 Zeppelin Spark interpreter configuration is set according to environment
 variable values at deploy time. If you alter these variables post
 deployment (e.g., `juju set spark spark_execution_mode=NEW_VALUE`), you will
