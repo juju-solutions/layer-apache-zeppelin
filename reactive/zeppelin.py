@@ -35,7 +35,7 @@ def stop_zeppelin():
     zepp = Zeppelin()
     zepp.close_ports()
     zepp.stop()
-    remove_state('zepplin.started')
+    remove_state('zeppelin.started')
 
 
 @when_not('spark.joined')
