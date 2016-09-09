@@ -4,3 +4,9 @@ options:
         default: ''
         description: |
             URL from which to fetch resources (e.g., Hadoop binaries) instead of Launchpad.
+    max_message_size:
+        type: int
+        default: 1024000
+        description: |
+            Size in characters of the maximum text message to be received by websocket.
+            This affects, among other things, how large of a notebook can be imported.

@@ -103,6 +103,8 @@ class Zeppelin(object):
         with utils.xmlpropmap_edit_in_place(zeppelin_site) as xml:
             xml['zeppelin.server.port'] = self.dist_config.port('zeppelin')
             xml['zeppelin.notebook.dir'] = self.dist_config.path('zeppelin_notebooks')
+            xml['zeppelin.websocket.max.text.message.size'] = hookenv.config(
+                'max_message_size')
 
         etc_env = utils.read_etc_env()
         hadoop_conf_dir = etc_env.get('HADOOP_CONF_DIR', '/etc/hadoop/conf')
