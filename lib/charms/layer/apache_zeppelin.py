@@ -184,7 +184,8 @@ class ZeppelinAPI(object):
 
     def import_notebook(self, contents):
         response = requests.post(self._url('notebook'), data=contents)
-        response.raise_for_status()
+        if response.status_code != 200:
+            return None
         return response.json()['body']
 
     def delete_notebook(self, notebook_id):
