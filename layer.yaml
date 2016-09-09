@@ -1,5 +1,5 @@
 repo: git@github.com:juju-solutions/layer-apache-zeppelin.git
-includes: ['layer:basic', 'interface:spark']
+includes: ['layer:basic', 'interface:spark', 'interface:zeppelin']
 options:
   basic:
     use_venv: true

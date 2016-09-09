@@ -3,6 +3,8 @@ import jujuresources
 
 from path import Path
 from jujubigdata import utils
+import requests
+from urllib.parse import urljoin
 from subprocess import call
 from charmhelpers.core import unitdata, hookenv
 
@@ -168,3 +170,22 @@ class Zeppelin(object):
     def cleanup(self):
         self.dist_config.remove_dirs()
         unitdata.kv().set('zeppelin.installed', False)
+
+
+class ZeppelinAPI(object):
+    """
+    Helper for interacting with the Appache Zeppelin REST API.
+    """
+    def _url(self, *parts):
+        url = 'http://localhost:9090/api/'
+        for part in parts:
+            url = urljoin(url, part)
+        return url
+
+    def import_notebook(self, contents):
+        response = requests.post(self._url('notebook'), data=contents)
+        response.raise_for_status()
+        return response.json()['body']
+
+    def delete_notebook(self, notebook_id):
+        requests.delete(self._url('notebook', notebook_id))
