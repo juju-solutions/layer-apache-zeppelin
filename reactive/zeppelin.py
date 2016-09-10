@@ -26,6 +26,15 @@ def configure_zeppelin(spark):
     zepp.open_ports()
     set_state('zeppelin.started')
     hookenv.status_set('active', 'Ready')
+    remove_state('config.changed.max_message_size')
+
+
+@when('zeppelin.started', 'config.changed.max_message_size')
+def reconfigure_zeppelin():
+    zepp = Zeppelin()
+    zepp.configure_zeppelin()
+    zepp.stop()
+    zepp.start()
 
 
 @when('zeppelin.started')
