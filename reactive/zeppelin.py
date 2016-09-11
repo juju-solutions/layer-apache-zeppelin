@@ -58,7 +58,7 @@ def register_notebook(client):
     api = ZeppelinAPI()
     id_map = unitdata.kv().get('zeppelin.notebooks.id_map', {})
     for notebook in notebooks:
-        notebook_md5 = hashlib.md5(notebook).hexdigest()
+        notebook_md5 = hashlib.md5(notebook.encode('utf8')).hexdigest()
         notebook_id = api.import_notebook(notebook)
         if notebook_id:
             hookenv.log('Registered notebook: {} -> {}'.format(notebook_md5,
@@ -69,7 +69,6 @@ def register_notebook(client):
             hookenv.log('Rejected notebook: {}'.format(notebook_md5))
             client.reject_notebook(notebook)
     unitdata.kv().set('zeppelin.notebooks.id_map', id_map)
-    client.notebooks_registered()
 
 
 @when('zeppelin.started', 'client.notebook.removed')
@@ -78,7 +77,7 @@ def remove_notebook(client):
     api = ZeppelinAPI()
     id_map = unitdata.kv().get('zeppelin.notebooks.id_map', {})
     for notebook in notebooks:
-        notebook_md5 = hashlib.md5(notebook).hexdigest()
+        notebook_md5 = hashlib.md5(notebook.encode('utf8')).hexdigest()
         notebook_id = id_map.get(notebook_md5, None)
         if not notebook_id:
             hookenv.log('Skipping removing unknown notebook: {}'.format(
