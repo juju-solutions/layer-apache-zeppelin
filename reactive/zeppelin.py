@@ -38,7 +38,7 @@ def update_spark_master(spark):
     zepp = Zeppelin()
     api = ZeppelinAPI()
     api.modify_interpreter('spark', properties={
-        'spark.master': spark.get_master_info()['master'],
+        'master': spark.get_master_info()['master'],
     })
     zepp.restart()
     spark.accept_master()
