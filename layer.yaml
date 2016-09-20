@@ -3,3 +3,11 @@ includes: ['layer:basic', 'interface:spark', 'interface:zeppelin']
 options:
   basic:
     use_venv: true
+    include_system_packages: true
+defines:
+  implementation_class:
+    type: string
+    description: |
+      Class to use for performing the work required by the charm.
+      Allows higher layers to override with a subclass, to extend functionality.
+    default: 'charms.layer.apache_zeppelin.Zeppelin'

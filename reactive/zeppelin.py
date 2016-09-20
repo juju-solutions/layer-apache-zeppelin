@@ -11,7 +11,7 @@ from charms.layer.apache_zeppelin import Zeppelin, ZeppelinAPI
 @when('spark.ready')
 @when_not('zeppelin.installed')
 def install_zeppelin(hadoop):
-    zepp = Zeppelin()
+    zepp = Zeppelin.get()
     if zepp.verify_resources():
         hookenv.status_set('maintenance', 'Installing Zeppelin')
         if zepp.install():
@@ -25,7 +25,7 @@ def install_zeppelin(hadoop):
 @when_not('zeppelin.started')
 def configure_zeppelin(spark):
     hookenv.status_set('maintenance', 'Setting up Zeppelin')
-    zepp = Zeppelin()
+    zepp = Zeppelin.get()
     zepp.configure_zeppelin()
     zepp.start()
     zepp.open_ports()
@@ -35,7 +35,7 @@ def configure_zeppelin(spark):
 
 @when('zeppelin.started', 'spark.master.changed')
 def update_spark_master(spark):
-    zepp = Zeppelin()
+    zepp = Zeppelin.get()
     api = ZeppelinAPI()
     api.modify_interpreter('spark', properties={
         'master': spark.get_master_info()['master'],
@@ -48,7 +48,7 @@ def update_spark_master(spark):
 @when_not('spark.ready')
 def stop_zeppelin():
     hookenv.status_set('maintenance', 'Stopping Zeppelin')
-    zepp = Zeppelin()
+    zepp = Zeppelin.get()
     zepp.close_ports()
     zepp.stop()
     remove_state('zeppelin.started')
@@ -106,7 +106,7 @@ def remove_notebook(client):
 
 @when('zeppelin.started', 'client.interpreter.change')
 def modify_interpreter(client):
-    zepp = Zeppelin()
+    zepp = Zeppelin.get()
     api = ZeppelinAPI()
     for interpreter in client.interpreter_changes():
         try:

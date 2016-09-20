@@ -3,6 +3,7 @@ import json
 import time
 import shutil
 import socket
+from importlib import import_module
 
 import jujuresources
 
@@ -14,6 +15,8 @@ from subprocess import call
 from charmhelpers.core import unitdata, hookenv, host
 from charmhelpers import fetch
 
+from charms import layer
+
 
 class Zeppelin(object):
     """
@@ -21,6 +24,17 @@ class Zeppelin(object):
 
     :param DistConfig dist_config: The configuration container object needed.
     """
+    @classmethod
+    def get(cls):
+        """
+        Dynamically instantiate this or a subclass, to allow other layers
+        to override portions of this implementation.
+        """
+        impl = layer.options('apache-zeppelin')['implementation_class']
+        module_name, cls_name = impl.rsplit('.', 1)
+        cls = getattr(import_module(module_name), cls_name)
+        return cls()
+
     def __init__(self, dist_config=None):
         self.dist_config = dist_config or utils.DistConfig()
         self.resources = {
@@ -28,7 +42,7 @@ class Zeppelin(object):
         }
 
     def verify_resources(self):
-        if hookenv.resource_get(self.resources['zeppelin']):
+        if hookenv.resource_get('zeppelin'):
             return True
         elif jujuresources.resource_defined(self.resources['zeppelin']):
             return utils.verify_resources(*self.resources.values())()
@@ -42,7 +56,7 @@ class Zeppelin(object):
         :param bool force: Force the execution of the installation even if this
         is not the first installation attempt.
         '''
-        filename = hookenv.resource_get(self.resources['zeppelin'])
+        filename = hookenv.resource_get('zeppelin')
         if filename:
             extracted = fetch.install_remote('file://' + filename)
             # get the nested dir
@@ -240,7 +254,13 @@ class ZeppelinAPI(object):
 
     def modify_interpreter(self, interpreter_name, properties):
         response = requests.get(self._url('interpreter/', 'setting'))
-        for interpreter_data in response.json()['body']:
+        try:
+            body = response.json()['body']
+        except json.JSONDecodeError:
+            hookenv.log('Invalid response from API server: {} {}'.format(response, response.text),
+                        hookenv.ERROR)
+            raise
+        for interpreter_data in body:
             if interpreter_data['name'] == interpreter_name:
                 break
         else:
