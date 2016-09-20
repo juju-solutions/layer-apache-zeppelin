@@ -220,26 +220,14 @@ class ZeppelinAPI(object):
     def delete_notebook(self, notebook_id):
         requests.delete(self._url('notebook/', notebook_id))
 
-    def modify_interpreter(self, interpreter_name,
-                           properties=None, options=None, interpreter_group=None):
+    def modify_interpreter(self, interpreter_name, properties):
         response = requests.get(self._url('interpreter/', 'setting'))
         for interpreter_data in response.json()['body']:
             if interpreter_data['name'] == interpreter_name:
                 break
         else:
             raise ValueError('Interpreter not found: {}'.format(interpreter_name))
-        if properties:
-            interpreter_data['properties'].update(properties)
-        if options:
-            interpreter_data['options'].update(options)
-        if interpreter_group:
-            for to_modify in interpreter_group:
-                for candidate in interpreter_data['interpreterGroup']:
-                    if candidate['name'] == to_modify['name']:
-                        candidate['class'] = to_modify['class']
-                        break
-                else:
-                    interpreter_data['interpreterGroup'].append(to_modify)
+        interpreter_data['properties'].update(properties)
         response = requests.put(self._url('interpreter/', 'setting/',
                                           interpreter_data['id']),
                                 data=json.dumps(interpreter_data))

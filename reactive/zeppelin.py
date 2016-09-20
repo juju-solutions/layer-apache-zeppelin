@@ -111,9 +111,7 @@ def modify_interpreter(client):
     for interpreter in client.interpreter_changes():
         try:
             api.modify_interpreter(interpreter['name'],
-                                   interpreter['properties'],
-                                   interpreter['options'],
-                                   interpreter['interpreter_group'])
+                                   interpreter['properties'])
             client.accept_interpreter_change(interpreter)
             zepp.restart()
         except ValueError as e:
