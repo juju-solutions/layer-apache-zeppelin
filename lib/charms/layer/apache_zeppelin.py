@@ -205,7 +205,8 @@ class ZeppelinAPI(object):
     Helper for interacting with the Appache Zeppelin REST API.
     """
     def _url(self, *parts):
-        url = 'http://localhost:9090/api/'
+        dc = utils.DistConfig()
+        url = 'http://localhost:{}/api/'.format(dc.port('zeppelin'))
         for part in parts:
             url = urljoin(url, part)
         return url
