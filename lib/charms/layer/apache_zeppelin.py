@@ -3,6 +3,7 @@ import json
 import time
 import shutil
 import socket
+from datetime import datetime
 from importlib import import_module
 
 import jujuresources
@@ -209,15 +210,13 @@ class Zeppelin(object):
             utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
 
     def restart(self):
-        zeppelin_conf = self.dist_config.path('zeppelin_conf')
-        zeppelin_home = self.dist_config.path('zeppelin')
-        daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
-        # chdir here because things like zepp tutorial think ZEPPELIN_HOME
-        # is wherever the daemon was started from.
-        with host.chdir(zeppelin_home):
-            utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'restart')
-        # wait up to 30s for server to start responding, lest API requests fail
-        self.wait_for_api(30)
+        self.stop()
+        start = datetime.now()
+        while utils.jps("zeppelin"):
+            time.sleep(1)
+            if datetime.now() - start > 30:
+                raise utils.TimeoutError('Zeppelin did not stop')
+        self.start()
 
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
