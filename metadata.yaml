@@ -15,3 +15,8 @@ requires:
 provides:
   client:
     interface: zeppelin
+resources:
+  zeppelin:
+    type: file
+    filename: zeppelin.tar.gz
+    description: The Apache Zeppelin distribution
