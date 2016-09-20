@@ -31,6 +31,17 @@ def configure_zeppelin(spark):
     hookenv.status_set('active', 'Ready')
 
 
+@when('zeppelin.started', 'spark.master.changed')
+def update_spark_master(spark):
+    zepp = Zeppelin()
+    api = ZeppelinAPI()
+    api.modify_interpreter('spark', properties={
+        'spark.master': spark.get_master_info()['master'],
+    })
+    zepp.restart()
+    spark.accept_master()
+
+
 @when('zeppelin.started')
 @when_not('spark.ready')
 def stop_zeppelin():
@@ -89,3 +100,21 @@ def remove_notebook(client):
         client.remove_notebook(notebook)
         del id_map[notebook_md5]
     unitdata.kv().set('zeppelin.notebooks.id_map', id_map)
+
+
+@when('zeppelin.started', 'client.interpreter.change')
+def modify_interpreter(client):
+    zepp = Zeppelin()
+    api = ZeppelinAPI()
+    for interpreter in client.interpreter_changes():
+        try:
+            api.modify_interpreter(interpreter['name'],
+                                   interpreter['properties'],
+                                   interpreter['options'],
+                                   interpreter['interpreter_group'])
+            client.accept_interpreter_change(interpreter)
+            zepp.restart()
+        except ValueError as e:
+            hookenv.log('Rejected change for "{}" interpreter: {}'.format(
+                interpreter['name'], e))
+            client.reject_interpreter_change(interpreter, str(e))

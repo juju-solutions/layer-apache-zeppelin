@@ -1,4 +1,7 @@
 import os
+import json
+from datetime import datetime
+from time import sleep
 import jujuresources
 
 from path import Path
@@ -159,6 +162,12 @@ class Zeppelin(object):
             daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
             utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
 
+    def restart(self):
+        zeppelin_conf = self.dist_config.path('zeppelin_conf')
+        zeppelin_home = self.dist_config.path('zeppelin')
+        daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
+        utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'restart')
+
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
             hookenv.open_port(port)
@@ -189,4 +198,30 @@ class ZeppelinAPI(object):
         return response.json()['body']
 
     def delete_notebook(self, notebook_id):
-        requests.delete(self._url('notebook', notebook_id))
+        requests.delete(self._url('notebook/', notebook_id))
+
+    def modify_interpreter(self, interpreter_name,
+                           properties=None, options=None, interpreter_group=None):
+        response = requests.get(self._url('interpreter/', 'setting'))
+        for interpreter_data in response.json()['body']:
+            if interpreter_data['name'] == interpreter_name:
+                break
+        else:
+            raise ValueError('Interpreter not found: {}'.format(interpreter_name))
+        if properties:
+            interpreter_data['properties'].update(properties)
+        if options:
+            interpreter_data['options'].update(options)
+        if interpreter_group:
+            for to_modify in interpreter_group:
+                for candidate in interpreter_data['interpreterGroup']:
+                    if candidate['name'] == to_modify['name']:
+                        candidate['class'] = to_modify['class']
+                        break
+                else:
+                    interpreter_data['interpreterGroup'].append(to_modify)
+        response = requests.put(self._url('interpreter/', 'setting/',
+                                          interpreter_data['id']),
+                                data=json.dumps(interpreter_data))
+        if response.status_code != 200:
+            raise ValueError('Unable to update interpreter: {}'.format(response.text))
