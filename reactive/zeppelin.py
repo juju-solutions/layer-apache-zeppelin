@@ -15,6 +15,7 @@ def install_zeppelin(hadoop):
     if zepp.verify_resources():
         hookenv.status_set('maintenance', 'Installing Zeppelin')
         if zepp.install():
+            zepp.setup_zeppelin()
             set_state('zeppelin.installed')
             return
     hookenv.status_set('blocked', 'unable to fetch zeppelin resource')
@@ -25,7 +26,6 @@ def install_zeppelin(hadoop):
 def configure_zeppelin(spark):
     hookenv.status_set('maintenance', 'Setting up Zeppelin')
     zepp = Zeppelin()
-    zepp.setup_zeppelin()
     zepp.configure_zeppelin()
     zepp.start()
     zepp.open_ports()

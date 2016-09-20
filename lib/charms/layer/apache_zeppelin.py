@@ -1,7 +1,9 @@
 import os
 import json
-from datetime import datetime
-from time import sleep
+import time
+import shutil
+import socket
+
 import jujuresources
 
 from path import Path
@@ -9,7 +11,8 @@ from jujubigdata import utils
 import requests
 from urllib.parse import urljoin
 from subprocess import call
-from charmhelpers.core import unitdata, hookenv
+from charmhelpers.core import unitdata, hookenv, host
+from charmhelpers import fetch
 
 
 class Zeppelin(object):
@@ -32,19 +35,13 @@ class Zeppelin(object):
         else:
             return False
 
-    def is_installed(self):
-        return unitdata.kv().get('zeppelin.prepared')
-
-    def install(self, force=False):
+    def install(self):
         '''
         Create the directories. This method is to be called only once.
 
         :param bool force: Force the execution of the installation even if this
         is not the first installation attempt.
         '''
-        if not force and self.is_installed():
-            return
-
         filename = hookenv.resource_get(self.resources['zeppelin'])
         if filename:
             extracted = fetch.install_remote('file://' + filename)
@@ -60,11 +57,10 @@ class Zeppelin(object):
                                   skip_top_level=True)
         else:
             return False
+
         self.dist_config.add_dirs()
         self.dist_config.add_packages()
-
-        unitdata.kv().set('zeppelin.prepared', True)
-        unitdata.kv().flush(True)
+        return True
 
     def setup_zeppelin(self):
         self.setup_zeppelin_config()
@@ -168,11 +164,28 @@ class Zeppelin(object):
             zeppelin_home = self.dist_config.path('zeppelin')
             # chdir here because things like zepp tutorial think ZEPPELIN_HOME
             # is wherever the daemon was started from.
-            os.chdir(zeppelin_home)
-            utils.run_as('ubuntu',
-                         '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home),
-                         '--config', zeppelin_conf,
-                         'start')
+            with host.chdir(zeppelin_home):
+                utils.run_as('ubuntu',
+                             '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home),
+                             '--config', zeppelin_conf,
+                             'start')
+            # wait up to 30s for server to start responding, lest API requests fail
+            self.wait_for_api(30)
+
+    def check_connect(self, addr, port):
+        try:
+            with socket.create_connection((addr, port), timeout=10):
+                return True
+        except OSError:
+            return False
+
+    def wait_for_api(self, timeout):
+        start = time.time()
+        while time.time() - start < timeout:
+            if self.check_connect('localhost', self.dist_config.port('zeppelin')):
+                return True
+            time.sleep(2)
+        raise utils.TimeoutError('Timed-out waiting for connection to Zeppelin')
 
     def stop(self):
         if utils.jps("zeppelin"):
@@ -185,7 +198,12 @@ class Zeppelin(object):
         zeppelin_conf = self.dist_config.path('zeppelin_conf')
         zeppelin_home = self.dist_config.path('zeppelin')
         daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
-        utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'restart')
+        # chdir here because things like zepp tutorial think ZEPPELIN_HOME
+        # is wherever the daemon was started from.
+        with host.chdir(zeppelin_home):
+            utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'restart')
+        # wait up to 30s for server to start responding, lest API requests fail
+        self.wait_for_api(30)
 
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
