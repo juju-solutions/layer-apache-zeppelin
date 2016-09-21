@@ -12,13 +12,12 @@ from charms.layer.apache_zeppelin import Zeppelin, ZeppelinAPI
 @when_not('zeppelin.installed')
 def install_zeppelin(hadoop):
     zepp = Zeppelin.get()
-    if zepp.verify_resources():
-        hookenv.status_set('maintenance', 'Installing Zeppelin')
-        if zepp.install():
-            zepp.setup_zeppelin()
-            set_state('zeppelin.installed')
-            return
-    hookenv.status_set('blocked', 'unable to fetch zeppelin resource')
+    hookenv.status_set('maintenance', 'Installing Zeppelin')
+    if zepp.install():
+        zepp.setup_zeppelin()
+        set_state('zeppelin.installed')
+    else:
+        hookenv.status_set('blocked', 'unable to fetch zeppelin resource')
 
 
 @when('zeppelin.installed', 'spark.ready')

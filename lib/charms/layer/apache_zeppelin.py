@@ -57,18 +57,21 @@ class Zeppelin(object):
         :param bool force: Force the execution of the installation even if this
         is not the first installation attempt.
         '''
+        if not self.verify_resources():
+            return False
+
         filename = hookenv.resource_get('zeppelin')
+        destination = self.dist_config.path('zeppelin')
         if filename:
             extracted = fetch.install_remote('file://' + filename)
             # get the nested dir
             extracted = os.path.join(extracted, os.listdir(extracted)[0])
-            destination = self.dist_config.path('zeppelin')
             if os.path.exists(destination):
                 shutil.rmtree(destination)
             shutil.copytree(extracted, destination)
         elif jujuresources.resource_defined(self.resources['zeppelin']):
             jujuresources.install(self.resources['zeppelin'],
-                                  destination=self.dist_config.path('zeppelin'),
+                                  destination=destination,
                                   skip_top_level=True)
         else:
             return False
@@ -202,20 +205,26 @@ class Zeppelin(object):
             time.sleep(2)
         raise utils.TimeoutError('Timed-out waiting for connection to Zeppelin')
 
+    def wait_for_stop(self, timeout):
+        start = datetime.now()
+        while utils.jps("zeppelin"):
+            time.sleep(1)
+            if datetime.now() - start > timeout:
+                raise utils.TimeoutError('Zeppelin did not stop')
+
     def stop(self):
         if utils.jps("zeppelin"):
             zeppelin_conf = self.dist_config.path('zeppelin_conf')
             zeppelin_home = self.dist_config.path('zeppelin')
             daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
             utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
+            # wait for the process to stop, since issuing a start while the
+            # process is still running (i.e., restart) could cause it to not
+            # start up again
+            self.wait_for_stop(30)
 
     def restart(self):
         self.stop()
-        start = datetime.now()
-        while utils.jps("zeppelin"):
-            time.sleep(1)
-            if datetime.now() - start > 30:
-                raise utils.TimeoutError('Zeppelin did not stop')
         self.start()
 
     def open_ports(self):
