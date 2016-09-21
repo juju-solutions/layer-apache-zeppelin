@@ -43,12 +43,12 @@ class Zeppelin(object):
         }
 
     def verify_resources(self):
-        if hookenv.resource_get('zeppelin'):
-            return True
-        elif jujuresources.resource_defined(self.resources['zeppelin']):
+        try:
+            return hookenv.resource_get('zeppelin')
+        except NotImplementedError:
+            if not jujuresources.resource_defined(self.resources['zeppelin']):
+                return False
             return utils.verify_resources(*self.resources.values())()
-        else:
-            return False
 
     def install(self):
         '''
@@ -60,21 +60,23 @@ class Zeppelin(object):
         if not self.verify_resources():
             return False
 
-        filename = hookenv.resource_get('zeppelin')
-        destination = self.dist_config.path('zeppelin')
-        if filename:
+        try:
+            filename = hookenv.resource_get('zeppelin')
+            destination = self.dist_config.path('zeppelin')
+            if not filename:
+                return False
             extracted = fetch.install_remote('file://' + filename)
             # get the nested dir
             extracted = os.path.join(extracted, os.listdir(extracted)[0])
             if os.path.exists(destination):
                 shutil.rmtree(destination)
             shutil.copytree(extracted, destination)
-        elif jujuresources.resource_defined(self.resources['zeppelin']):
+        except NotImplementedError:
+            if not jujuresources.resource_defined(self.resources['zeppelin']):
+                return False
             jujuresources.install(self.resources['zeppelin'],
                                   destination=destination,
                                   skip_top_level=True)
-        else:
-            return False
 
         self.dist_config.add_dirs()
         self.dist_config.add_packages()
