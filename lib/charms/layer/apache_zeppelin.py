@@ -43,7 +43,14 @@ class Zeppelin(object):
 
     def verify_resources(self):
         try:
-            return hookenv.resource_get('zeppelin')
+            filename = hookenv.resource_get('zeppelin')
+            if not filename:
+                return False
+            if Path(filename).size == 0:
+                # work around charm store resource upload issue
+                # by falling-back to pulling from S3
+                raise NotImplementedError()
+            return True
         except NotImplementedError:
             if not jujuresources.resource_defined(self.resources['zeppelin']):
                 return False
