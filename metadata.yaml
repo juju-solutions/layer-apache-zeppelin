@@ -18,5 +18,5 @@ provides:
 resources:
   zeppelin:
     type: file
-    filename: zeppelin.tar.gz
+    filename: zeppelin.tgz
     description: The Apache Zeppelin distribution
