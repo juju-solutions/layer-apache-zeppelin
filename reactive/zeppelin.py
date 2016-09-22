@@ -33,7 +33,7 @@ def configure_zeppelin(spark):
     hookenv.status_set('active', 'Ready')
 
 
-@when('zeppelin.started', 'spark.ready')
+@when('zeppelin.started', 'spark.master')
 def update_spark_master(spark):
     zepp = Zeppelin.get()
     api = ZeppelinAPI()
