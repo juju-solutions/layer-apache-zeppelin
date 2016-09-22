@@ -1,7 +1,6 @@
 import os
 import json
 import time
-import shutil
 import socket
 from datetime import datetime
 from importlib import import_module
@@ -50,27 +49,28 @@ class Zeppelin(object):
                 return False
             return utils.verify_resources(*self.resources.values())()
 
-    def install(self):
+    def install(self, force=False):
         '''
         Create the directories. This method is to be called only once.
 
         :param bool force: Force the execution of the installation even if this
         is not the first installation attempt.
         '''
+        destination = self.dist_config.path('zeppelin')
+
         if not self.verify_resources():
             return False
 
+        if destination.exists() and not force:
+            return True
+
         try:
             filename = hookenv.resource_get('zeppelin')
-            destination = self.dist_config.path('zeppelin')
             if not filename:
                 return False
-            extracted = fetch.install_remote('file://' + filename)
-            # get the nested dir
-            extracted = os.path.join(extracted, os.listdir(extracted)[0])
-            if os.path.exists(destination):
-                shutil.rmtree(destination)
-            shutil.copytree(extracted, destination)
+            destination.rmtree_p()  # if reinstalling
+            extracted = Path(fetch.install_remote('file://' + filename))
+            extracted.dirs()[0].copytree(destination)  # only copy nested dir
         except NotImplementedError:
             if not jujuresources.resource_defined(self.resources['zeppelin']):
                 return False

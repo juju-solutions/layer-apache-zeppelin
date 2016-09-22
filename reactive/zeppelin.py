@@ -4,6 +4,7 @@ import hashlib
 from charmhelpers.core import unitdata
 from charms.reactive import when, when_not
 from charms.reactive import set_state, remove_state
+from charms.reactive.helpers import data_changed
 from charmhelpers.core import hookenv
 from charms.layer.apache_zeppelin import Zeppelin, ZeppelinAPI
 
@@ -32,15 +33,16 @@ def configure_zeppelin(spark):
     hookenv.status_set('active', 'Ready')
 
 
-@when('zeppelin.started', 'spark.master.changed')
+@when('zeppelin.started', 'spark.ready')
 def update_spark_master(spark):
     zepp = Zeppelin.get()
     api = ZeppelinAPI()
-    api.modify_interpreter('spark', properties={
-        'master': spark.get_master_info()['master'],
-    })
-    zepp.restart()
-    spark.accept_master()
+    master_url = spark.get_master_url()
+    if data_changed('spark.master', master_url):
+        api.modify_interpreter('spark', properties={
+            'master': master_url,
+        })
+        zepp.restart()
 
 
 @when('zeppelin.started')
