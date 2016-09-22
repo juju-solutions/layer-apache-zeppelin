@@ -68,6 +68,10 @@ class Zeppelin(object):
             filename = hookenv.resource_get('zeppelin')
             if not filename:
                 return False
+            if Path(filename).size == 0:
+                # work around charm store resource upload issue
+                # by falling-back to pulling from S3
+                raise NotImplementedError()
             destination.rmtree_p()  # if reinstalling
             extracted = Path(fetch.install_remote('file://' + filename))
             extracted.dirs()[0].copytree(destination)  # only copy nested dir
