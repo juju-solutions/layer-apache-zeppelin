@@ -85,6 +85,8 @@ class Zeppelin(object):
         except NotImplementedError:
             if not jujuresources.resource_defined(self.resources['zeppelin']):
                 return False
+            if not utils.verify_resources(*self.resources.values())():
+                return False
             jujuresources.install(self.resources['zeppelin'],
                                   destination=destination,
                                   skip_top_level=True)
