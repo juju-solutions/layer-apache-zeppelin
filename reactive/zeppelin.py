@@ -35,14 +35,11 @@ def configure_zeppelin(spark):
 
 @when('zeppelin.started', 'spark.master')
 def update_spark_master(spark):
-    zepp = Zeppelin.get()
-    api = ZeppelinAPI()
     master_url = spark.get_master_url()
+    master_ip = spark.get_master_ip()
     if data_changed('spark.master', master_url):
-        api.modify_interpreter('spark', properties={
-            'master': master_url,
-        })
-        zepp.restart()
+        zepp = Zeppelin.get()
+        zepp.update_master(master_url, master_ip)
 
 
 @when('zeppelin.started')

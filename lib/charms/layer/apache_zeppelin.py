@@ -189,6 +189,13 @@ class Zeppelin(object):
         cmd = "chown -R ubuntu:hadoop {}".format(self.dist_config.path('zeppelin_conf'))
         call(cmd.split())
 
+    def update_master(self, master_url, master_ip):
+        api = ZeppelinAPI()
+        api.modify_interpreter('spark', properties={
+            'master': master_url,
+        })
+        self.restart()
+
     def start(self):
         # Start if we're not already running. We currently dont have any
         # runtime config options, so no need to restart when hooks fire.
