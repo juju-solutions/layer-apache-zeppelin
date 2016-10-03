@@ -16,6 +16,7 @@ from charmhelpers.core import unitdata, hookenv, host
 from charmhelpers import fetch
 
 from charms import layer
+from charms.templating.jinja2 import render
 
 
 class Zeppelin(object):
@@ -97,6 +98,7 @@ class Zeppelin(object):
 
     def setup_zeppelin(self):
         self.setup_zeppelin_config()
+        self.setup_init_scripts()
         self.setup_zeppelin_tutorial()
 
     def setup_zeppelin_config(self):
@@ -114,6 +116,29 @@ class Zeppelin(object):
         zeppelin_site = self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml'
         if not zeppelin_site.exists():
             (self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml.template').copy(zeppelin_site)
+
+    def setup_init_scripts(self):
+        if host.init_is_systemd():
+            template_path = '/etc/systemd/system/zeppelin.service'
+            template_name = 'systemd.conf'
+        else:
+            template_path = '/etc/init/zeppelin.conf'
+            template_name = 'upstart.conf'
+        if os.path.exists(template_path):
+            os.remove(template_path)
+
+        render(
+            template_name,
+            template_path,
+            context={
+                'zeppelin_home': self.dist_config.path('zeppelin'),
+                'zeppelin_conf': self.dist_config.path('zeppelin_conf')
+            },
+        )
+
+        if host.init_is_systemd():
+            utils.run_as('root', 'systemctl', 'enable', 'zeppelin.service')
+            utils.run_as('root', 'systemctl', 'daemon-reload')
 
     def setup_zeppelin_tutorial(self):
         # The default zepp tutorial doesn't work with spark+hdfs (which is our
@@ -200,15 +225,7 @@ class Zeppelin(object):
         # Start if we're not already running. We currently dont have any
         # runtime config options, so no need to restart when hooks fire.
         if not utils.jps("zeppelin"):
-            zeppelin_conf = self.dist_config.path('zeppelin_conf')
-            zeppelin_home = self.dist_config.path('zeppelin')
-            # chdir here because things like zepp tutorial think ZEPPELIN_HOME
-            # is wherever the daemon was started from.
-            with host.chdir(zeppelin_home):
-                utils.run_as('ubuntu',
-                             '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home),
-                             '--config', zeppelin_conf,
-                             'start')
+            host.service_start('zeppelin')
             # wait up to 30s for server to start responding, lest API requests fail
             self.wait_for_api(30)
 
@@ -231,15 +248,12 @@ class Zeppelin(object):
         start = datetime.now()
         while utils.jps("zeppelin"):
             time.sleep(1)
-            if datetime.now() - start > timeout:
+            if (datetime.now() - start).seconds > timeout:
                 raise utils.TimeoutError('Zeppelin did not stop')
 
     def stop(self):
         if utils.jps("zeppelin"):
-            zeppelin_conf = self.dist_config.path('zeppelin_conf')
-            zeppelin_home = self.dist_config.path('zeppelin')
-            daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
-            utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
+            host.service_stop('zeppelin')
             # wait for the process to stop, since issuing a start while the
             # process is still running (i.e., restart) could cause it to not
             # start up again
