@@ -2,7 +2,6 @@ import os
 import json
 import time
 import socket
-from datetime import datetime
 from importlib import import_module
 
 import jujuresources
@@ -125,7 +124,10 @@ class Zeppelin(object):
             template_path = '/etc/init/zeppelin.conf'
             template_name = 'upstart.conf'
         if os.path.exists(template_path):
-            os.remove(template_path)
+            template_path_backup = "{}.backup".format(template_path)
+            if os.path.exists(template_path_backup):
+                os.remove(template_path_backup)
+            os.rename(template_path, template_path_backup)
 
         render(
             template_name,
@@ -245,10 +247,10 @@ class Zeppelin(object):
         raise utils.TimeoutError('Timed-out waiting for connection to Zeppelin')
 
     def wait_for_stop(self, timeout):
-        start = datetime.now()
+        start = time.time()
         while utils.jps("zeppelin"):
             time.sleep(1)
-            if (datetime.now() - start).seconds > timeout:
+            if time.time() - start > timeout:
                 raise utils.TimeoutError('Zeppelin did not stop')
 
     def stop(self):
