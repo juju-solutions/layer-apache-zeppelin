@@ -25,7 +25,7 @@ class Zeppelin(object):
     :param DistConfig dist_config: The configuration container object needed.
     """
     @classmethod
-    def get(cls):
+    def factory(cls):
         """
         Dynamically instantiate this or a subclass, to allow other layers
         to override portions of this implementation.
