@@ -6,8 +6,17 @@ description: |
   analytics. You can make beautiful data-driven, interactive, and collaborative
   documents with SQL, Scala and more.
 tags: ["bigdata", "hadoop", "apache"]
+series: [trusty, xenial]
 subordinate: true
 requires:
   spark:
     interface: spark
     scope: container
+provides:
+  client:
+    interface: zeppelin
+resources:
+  zeppelin:
+    type: file
+    filename: zeppelin.tgz
+    description: The Apache Zeppelin distribution

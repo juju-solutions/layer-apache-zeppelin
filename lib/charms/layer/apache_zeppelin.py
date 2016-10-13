@@ -1,10 +1,21 @@
 import os
+import json
+import time
+import socket
+from importlib import import_module
+
 import jujuresources
 
 from path import Path
 from jujubigdata import utils
+import requests
+from urllib.parse import urljoin
 from subprocess import call
-from charmhelpers.core import unitdata, hookenv
+from charmhelpers.core import unitdata, hookenv, host
+from charmhelpers import fetch
+
+from charms import layer
+from charms.templating.jinja2 import render
 
 
 class Zeppelin(object):
@@ -13,15 +24,37 @@ class Zeppelin(object):
 
     :param DistConfig dist_config: The configuration container object needed.
     """
+    @classmethod
+    def factory(cls):
+        """
+        Dynamically instantiate this or a subclass, to allow other layers
+        to override portions of this implementation.
+        """
+        impl = layer.options('apache-zeppelin')['implementation_class']
+        module_name, cls_name = impl.rsplit('.', 1)
+        cls = getattr(import_module(module_name), cls_name)
+        return cls()
+
     def __init__(self, dist_config=None):
         self.dist_config = dist_config or utils.DistConfig()
         self.resources = {
             'zeppelin': 'zeppelin-%s' % utils.cpu_arch(),
         }
-        self.verify_resources = utils.verify_resources(*self.resources.values())
 
-    def is_installed(self):
-        return unitdata.kv().get('zeppelin.prepared')
+    def verify_resources(self):
+        try:
+            filename = hookenv.resource_get('zeppelin')
+            if not filename:
+                return False
+            if Path(filename).size == 0:
+                # work around charm store resource upload issue
+                # by falling-back to pulling from S3
+                raise NotImplementedError()
+            return True
+        except NotImplementedError:
+            if not jujuresources.resource_defined(self.resources['zeppelin']):
+                return False
+            return utils.verify_resources(*self.resources.values())()
 
     def install(self, force=False):
         '''
@@ -30,20 +63,41 @@ class Zeppelin(object):
         :param bool force: Force the execution of the installation even if this
         is not the first installation attempt.
         '''
-        if not force and self.is_installed():
-            return
+        destination = self.dist_config.path('zeppelin')
 
-        jujuresources.install(self.resources['zeppelin'],
-                              destination=self.dist_config.path('zeppelin'),
-                              skip_top_level=True)
+        if not self.verify_resources():
+            return False
+
+        if destination.exists() and not force:
+            return True
+
+        try:
+            filename = hookenv.resource_get('zeppelin')
+            if not filename:
+                return False
+            if Path(filename).size == 0:
+                # work around charm store resource upload issue
+                # by falling-back to pulling from S3
+                raise NotImplementedError()
+            destination.rmtree_p()  # if reinstalling
+            extracted = Path(fetch.install_remote('file://' + filename))
+            extracted.dirs()[0].copytree(destination)  # only copy nested dir
+        except NotImplementedError:
+            if not jujuresources.resource_defined(self.resources['zeppelin']):
+                return False
+            if not utils.verify_resources(*self.resources.values())():
+                return False
+            jujuresources.install(self.resources['zeppelin'],
+                                  destination=destination,
+                                  skip_top_level=True)
+
         self.dist_config.add_dirs()
         self.dist_config.add_packages()
-
-        unitdata.kv().set('zeppelin.prepared', True)
-        unitdata.kv().flush(True)
+        return True
 
     def setup_zeppelin(self):
         self.setup_zeppelin_config()
+        self.setup_init_scripts()
         self.setup_zeppelin_tutorial()
 
     def setup_zeppelin_config(self):
@@ -61,6 +115,32 @@ class Zeppelin(object):
         zeppelin_site = self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml'
         if not zeppelin_site.exists():
             (self.dist_config.path('zeppelin_conf') / 'zeppelin-site.xml.template').copy(zeppelin_site)
+
+    def setup_init_scripts(self):
+        if host.init_is_systemd():
+            template_path = '/etc/systemd/system/zeppelin.service'
+            template_name = 'systemd.conf'
+        else:
+            template_path = '/etc/init/zeppelin.conf'
+            template_name = 'upstart.conf'
+        if os.path.exists(template_path):
+            template_path_backup = "{}.backup".format(template_path)
+            if os.path.exists(template_path_backup):
+                os.remove(template_path_backup)
+            os.rename(template_path, template_path_backup)
+
+        render(
+            template_name,
+            template_path,
+            context={
+                'zeppelin_home': self.dist_config.path('zeppelin'),
+                'zeppelin_conf': self.dist_config.path('zeppelin_conf')
+            },
+        )
+
+        if host.init_is_systemd():
+            utils.run_as('root', 'systemctl', 'enable', 'zeppelin.service')
+            utils.run_as('root', 'systemctl', 'daemon-reload')
 
     def setup_zeppelin_tutorial(self):
         # The default zepp tutorial doesn't work with spark+hdfs (which is our
@@ -136,26 +216,54 @@ class Zeppelin(object):
         cmd = "chown -R ubuntu:hadoop {}".format(self.dist_config.path('zeppelin_conf'))
         call(cmd.split())
 
+    def update_master(self, master_url, master_ip):
+        api = ZeppelinAPI()
+        api.modify_interpreter('spark', properties={
+            'master': master_url,
+        })
+        self.restart()
+
     def start(self):
         # Start if we're not already running. We currently dont have any
         # runtime config options, so no need to restart when hooks fire.
         if not utils.jps("zeppelin"):
-            zeppelin_conf = self.dist_config.path('zeppelin_conf')
-            zeppelin_home = self.dist_config.path('zeppelin')
-            # chdir here because things like zepp tutorial think ZEPPELIN_HOME
-            # is wherever the daemon was started from.
-            os.chdir(zeppelin_home)
-            utils.run_as('ubuntu',
-                         '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home),
-                         '--config', zeppelin_conf,
-                         'start')
+            host.service_start('zeppelin')
+            # wait up to 30s for server to start responding, lest API requests fail
+            self.wait_for_api(30)
+
+    def check_connect(self, addr, port):
+        try:
+            with socket.create_connection((addr, port), timeout=10):
+                return True
+        except OSError:
+            return False
+
+    def wait_for_api(self, timeout):
+        start = time.time()
+        while time.time() - start < timeout:
+            if self.check_connect('localhost', self.dist_config.port('zeppelin')):
+                return True
+            time.sleep(2)
+        raise utils.TimeoutError('Timed-out waiting for connection to Zeppelin')
+
+    def wait_for_stop(self, timeout):
+        start = time.time()
+        while utils.jps("zeppelin"):
+            time.sleep(1)
+            if time.time() - start > timeout:
+                raise utils.TimeoutError('Zeppelin did not stop')
 
     def stop(self):
         if utils.jps("zeppelin"):
-            zeppelin_conf = self.dist_config.path('zeppelin_conf')
-            zeppelin_home = self.dist_config.path('zeppelin')
-            daemon = '{}/bin/zeppelin-daemon.sh'.format(zeppelin_home)
-            utils.run_as('ubuntu', daemon, '--config', zeppelin_conf, 'stop')
+            host.service_stop('zeppelin')
+            # wait for the process to stop, since issuing a start while the
+            # process is still running (i.e., restart) could cause it to not
+            # start up again
+            self.wait_for_stop(30)
+
+    def restart(self):
+        self.stop()
+        self.start()
 
     def open_ports(self):
         for port in self.dist_config.exposed_ports('zeppelin'):
@@ -168,3 +276,44 @@ class Zeppelin(object):
     def cleanup(self):
         self.dist_config.remove_dirs()
         unitdata.kv().set('zeppelin.installed', False)
+
+
+class ZeppelinAPI(object):
+    """
+    Helper for interacting with the Appache Zeppelin REST API.
+    """
+    def _url(self, *parts):
+        dc = utils.DistConfig()
+        url = 'http://localhost:{}/api/'.format(dc.port('zeppelin'))
+        for part in parts:
+            url = urljoin(url, part)
+        return url
+
+    def import_notebook(self, contents):
+        response = requests.post(self._url('notebook'), data=contents)
+        if response.status_code != 201:
+            return None
+        return response.json()['body']
+
+    def delete_notebook(self, notebook_id):
+        requests.delete(self._url('notebook/', notebook_id))
+
+    def modify_interpreter(self, interpreter_name, properties):
+        response = requests.get(self._url('interpreter/', 'setting'))
+        try:
+            body = response.json()['body']
+        except json.JSONDecodeError:
+            hookenv.log('Invalid response from API server: {} {}'.format(response, response.text),
+                        hookenv.ERROR)
+            raise
+        for interpreter_data in body:
+            if interpreter_data['name'] == interpreter_name:
+                break
+        else:
+            raise ValueError('Interpreter not found: {}'.format(interpreter_name))
+        interpreter_data['properties'].update(properties)
+        response = requests.put(self._url('interpreter/', 'setting/',
+                                          interpreter_data['id']),
+                                data=json.dumps(interpreter_data))
+        if response.status_code != 200:
+            raise ValueError('Unable to update interpreter: {}'.format(response.text))
